@@ -36,6 +36,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
@@ -83,6 +85,7 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
     private var actionBar: ActionBar? = null
     private var appBarLayout: FolioAppBarLayout? = null
     private var toolbar: Toolbar? = null
+    private var bookTitle: TextView? = null
     private var distractionFreeMode: Boolean = false
     private var handler: Handler? = null
 
@@ -282,9 +285,10 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
             mEpubFilePath = intent.extras!!
                 .getString(FolioActivity.INTENT_EPUB_SOURCE_PATH)
         }
-
+        bookTitle = findViewById(R.id.ivBookTitle)
         initActionBar()
         initMediaController()
+        setOnClickListeners()
 
         if (ContextCompat.checkSelfPermission(
                 this@FolioActivity,
@@ -308,11 +312,9 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
         setSupportActionBar(toolbar)
         actionBar = supportActionBar
 
-        val config = AppUtil.getSavedConfig(applicationContext)!!
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
-        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_drawer)
-        UiUtil.setColorIntToDrawable(config.themeColor, drawable!!)
-        toolbar!!.navigationIcon = drawable
+        val config = AppUtil.getSavedConfig(applicationContext)!!
 
         if (config.isNightMode) {
             setNightMode()
@@ -338,13 +340,37 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
         }
     }
 
+    private fun setOnClickListeners() {
+        val ivBack = findViewById<ImageView>(R.id.ivBack)
+        val highlights = findViewById<ImageView>(R.id.ivHighlights)
+
+        apllayThemeColor(ivBack, R.drawable.ic_cross)
+        apllayThemeColor(highlights, R.drawable.ic_drawer)
+
+        ivBack.setOnClickListener {
+            onBackPressed()
+        }
+
+        highlights.setOnClickListener {
+            startContentHighlightActivity()
+        }
+    }
+
+    private fun apllayThemeColor(imageView: ImageView, drawable: Int) {
+        val config = AppUtil.getSavedConfig(applicationContext)!!
+        val drawable = ContextCompat.getDrawable(this, drawable)
+        UiUtil.setColorIntToDrawable(config.themeColor, drawable!!)
+
+        imageView.setImageDrawable(drawable)
+    }
+
     override fun setDayMode() {
         Log.v(LOG_TAG, "-> setDayMode")
 
         actionBar!!.setBackgroundDrawable(
             ColorDrawable(ContextCompat.getColor(this, R.color.white))
         )
-        toolbar!!.setTitleTextColor(ContextCompat.getColor(this, R.color.black))
+        bookTitle?.setTextColor(ContextCompat.getColor(this, R.color.black))
     }
 
     override fun setNightMode() {
@@ -353,7 +379,7 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
         actionBar!!.setBackgroundDrawable(
             ColorDrawable(ContextCompat.getColor(this, R.color.black))
         )
-        toolbar!!.setTitleTextColor(ContextCompat.getColor(this, R.color.night_title_text_color))
+        bookTitle?.setTextColor(ContextCompat.getColor(this, R.color.night_title_text_color))
     }
 
     private fun initMediaController() {
@@ -381,12 +407,7 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
 
         val itemId = item.itemId
 
-        if (itemId == android.R.id.home) {
-            Log.v(LOG_TAG, "-> onOptionsItemSelected -> drawer")
-            startContentHighlightActivity()
-            return true
-
-        } else if (itemId == R.id.itemSearch) {
+        if (itemId == R.id.itemSearch) {
             Log.v(LOG_TAG, "-> onOptionsItemSelected -> " + item.title)
             if (searchUri == null)
                 return true
@@ -512,7 +533,7 @@ open class FolioActivity : AppCompatActivity(), FolioActivityCallback, MediaCont
 
         val publication = pubBox!!.publication
         spine = publication.readingOrder
-        title = publication.metadata.title
+        bookTitle?.text = publication.metadata.title
 
         if (mBookId == null) {
             if (!publication.metadata.identifier.isEmpty()) {
